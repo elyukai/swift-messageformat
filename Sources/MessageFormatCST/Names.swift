@@ -33,7 +33,7 @@ func parseNameValue(source: String, start: String.Index) -> (value: String, end:
     return (value: String(name), end: pos)
 }
 
-func isValidUnquotedLiteral(str: Substring) -> Bool {
+public func isValidUnquotedLiteral(str: String) -> Bool {
     if let match = str.prefixMatch(of: nameChars) {
         match.count == str.count
     } else {

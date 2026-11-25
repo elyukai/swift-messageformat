@@ -18,7 +18,7 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "MessageFormat",
-            dependencies: ["MessageFormatCST"],
+            dependencies: ["MessageFormatCST", "MessageFormatDataModel"],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],
@@ -29,9 +29,23 @@ let package = Package(
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],
         ),
+        .target(
+            name: "MessageFormatDataModel",
+            dependencies: ["MessageFormatCST"],
+            swiftSettings: [
+                .enableUpcomingFeature("ApproachableConcurrency"),
+            ],
+        ),
         .testTarget(
             name: "MessageFormatTests",
             dependencies: ["MessageFormat"],
+            swiftSettings: [
+                .enableUpcomingFeature("ApproachableConcurrency"),
+            ],
+        ),
+        .testTarget(
+            name: "MessageFormatCSTTests",
+            dependencies: ["MessageFormatCST"],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],

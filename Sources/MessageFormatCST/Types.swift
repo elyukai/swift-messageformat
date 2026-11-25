@@ -27,23 +27,34 @@ public enum Message: CustomStringConvertible {
     
     public var declarations: [Declaration] {
         switch self {
-        case .simple(let simpleMessage): []
+        case .simple(_): []
         case .complex(let complexMessage): complexMessage.declarations
         case .select(let selectMessage): selectMessage.declarations
         }
     }
+    
+    public var errors: [MessageSyntaxError] {
+        switch self {
+        case .simple(let simpleMessage): simpleMessage.errors
+        case .complex(let complexMessage): complexMessage.errors
+        case .select(let selectMessage): selectMessage.errors
+        }
+    }
 }
 
-public struct SimpleMessage: CustomStringConvertible {
+public struct SimpleMessage: Node {
     public let pattern: Pattern
     public let errors: [MessageSyntaxError]
     
     public var description: String {
         pattern.description
     }
+    
+    public var start: String.Index { pattern.start }
+    public var end: String.Index { pattern.end }
 }
 
-public struct ComplexMessage: CustomStringConvertible {
+public struct ComplexMessage: Node {
     public let declarations: [Declaration]
     public let pattern: Pattern
     public let errors: [MessageSyntaxError]
@@ -52,9 +63,17 @@ public struct ComplexMessage: CustomStringConvertible {
         declarations.map({ $0.description + "\n" }).joined() +
         pattern.bracedDescription
     }
+    
+    public var start: String.Index {
+        declarations.first?.start ?? pattern.start
+    }
+    
+    public var end: String.Index {
+        pattern.end
+    }
 }
 
-public struct SelectMessage: CustomStringConvertible {
+public struct SelectMessage: Node {
     public let declarations: [Declaration]
     public let match: Syntax
     public let selectors: [VariableRef]
@@ -66,6 +85,14 @@ public struct SelectMessage: CustomStringConvertible {
         match.description +
         selectors.map({ " " + $0.description }).joined() +
         variants.map({ "\n" + $0.description }).joined()
+    }
+    
+    public var start: String.Index {
+        declarations.first?.start ?? match.start
+    }
+    
+    public var end: String.Index {
+        variants.last?.end ?? selectors.last?.end ?? match.end
     }
 }
 
@@ -279,7 +306,7 @@ public struct Expression: Node {
     public let start: String.Index
     public let end: String.Index
     public let braces: Braces?
-    public let arg: Arg?
+    public let arg: SimpleValue?
     public let functionRef: FuncRef?
     public let markup: Markup?
     public let attributes: [Attribute]
@@ -303,39 +330,6 @@ public struct Expression: Node {
             str += " " + attr.description
         }
         return str + (braces?.closing?.description ?? "}")
-    }
-
-    public enum Arg: Node {
-        case literal(Literal)
-        case variableRef(VariableRef)
-        
-        public var description: String {
-            switch self {
-            case .literal(let wrappedNode): wrappedNode.description
-            case .variableRef(let wrappedNode): wrappedNode.description
-            }
-        }
-        
-        public var start: String.Index {
-            switch self {
-            case .literal(let wrappedNode): wrappedNode.start
-            case .variableRef(let wrappedNode): wrappedNode.start
-            }
-        }
-        
-        public var end: String.Index {
-            switch self {
-            case .literal(let wrappedNode): wrappedNode.end
-            case .variableRef(let wrappedNode): wrappedNode.end
-            }
-        }
-        
-        public var isVariableRef: Bool {
-            switch self {
-            case .literal(_): false
-            case .variableRef(_): true
-            }
-        }
     }
 
     public enum FuncRef: Node {
@@ -367,6 +361,39 @@ public struct Expression: Node {
     public enum FuncRefOrMarkup {
         case funcRef(FuncRef)
         case markup(Markup)
+    }
+}
+
+public enum SimpleValue: Node {
+    case literal(Literal)
+    case variableRef(VariableRef)
+    
+    public var description: String {
+        switch self {
+        case .literal(let wrappedNode): wrappedNode.description
+        case .variableRef(let wrappedNode): wrappedNode.description
+        }
+    }
+    
+    public var start: String.Index {
+        switch self {
+        case .literal(let wrappedNode): wrappedNode.start
+        case .variableRef(let wrappedNode): wrappedNode.start
+        }
+    }
+    
+    public var end: String.Index {
+        switch self {
+        case .literal(let wrappedNode): wrappedNode.end
+        case .variableRef(let wrappedNode): wrappedNode.end
+        }
+    }
+    
+    public var isVariableRef: Bool {
+        switch self {
+        case .literal(_): false
+        case .variableRef(_): true
+        }
     }
 }
 
@@ -463,36 +490,10 @@ public struct Option: Node {
     public let end: String.Index
     public let name: Identifier
     public let equals: Syntax?
-    public let value: Value
+    public let value: SimpleValue
     
     public var description: String {
         name.description + (equals?.description ?? "=") + value.description
-    }
-
-    public enum Value: Node {
-        case literal(Literal)
-        case variableRef(VariableRef)
-        
-        public var description: String {
-            switch self {
-            case .literal(let wrappedNode): wrappedNode.description
-            case .variableRef(let wrappedNode): wrappedNode.description
-            }
-        }
-        
-        public var start: String.Index {
-            switch self {
-            case .literal(let wrappedNode): wrappedNode.start
-            case .variableRef(let wrappedNode): wrappedNode.start
-            }
-        }
-        
-        public var end: String.Index {
-            switch self {
-            case .literal(let wrappedNode): wrappedNode.end
-            case .variableRef(let wrappedNode): wrappedNode.end
-            }
-        }
     }
 }
 
@@ -541,7 +542,7 @@ public struct Syntax: Node {
     }
 }
 
-public enum SyntaxKind: CustomStringConvertible {
+public enum SyntaxKind: CustomStringConvertible, Equatable {
     case asterisk
     case leftSingleBrace
     case leftDoubleBrace

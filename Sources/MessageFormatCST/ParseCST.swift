@@ -19,7 +19,6 @@ public class ParseContext {
         errors.append(
             MessageSyntaxError(
                 type: type,
-                source: source,
                 start: start,
                 end: end
             )
@@ -30,7 +29,6 @@ public class ParseContext {
         errors.append(
             MessageSyntaxError(
                 type: type,
-                source: source,
                 start: start,
                 end: source.index(start, offsetBy: expected.count),
                 expected: expected

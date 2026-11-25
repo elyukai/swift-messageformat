@@ -10,7 +10,7 @@ func parseExpression(ctx: ParseContext, start: String.Index) -> Expression {
     var pos = source.index(after: start) // "{"
     pos = whitespaces(src: source, start: pos).end
     
-    let arg: Expression.Arg? =
+    let arg: SimpleValue? =
         source[pos] == "$"
             ? .variableRef(parseVariable(ctx: ctx, start: pos))
             : parseLiteral(ctx: ctx, start: pos).map { .literal($0) }
@@ -43,7 +43,7 @@ func parseExpression(ctx: ParseContext, start: String.Index) -> Expression {
             functionRefOrMarkup =
                 .funcRef(.junk(.init(start: pos, end: end, source: String(source[pos]))))
             let error =
-                MessageSyntaxError(type: .parseError, source: source, start: start, end: end)
+                MessageSyntaxError(type: .parseError, start: start, end: end)
             junkError = error
             ctx.errors.append(error)
         }
@@ -77,7 +77,7 @@ func parseExpression(ctx: ParseContext, start: String.Index) -> Expression {
                 functionRefOrMarkup =
                     .funcRef(.junk(.init(start: newStart, end: pos, source: String(source[newStart..<pos]))))
                 if let err = junkError {
-                    junkError = MessageSyntaxError(type: err.type, source: source, start: err.start, end: pos)
+                    junkError = MessageSyntaxError(type: err.type, start: err.start, end: pos)
                 }
             case .funcRef(.function(_)), .markup(_), nil:
                 ctx.onError(type: .extraContent, start: errStart, end: pos)
@@ -156,7 +156,7 @@ private func parseFunctionRefOrMarkup(ctx: ParseContext, start: String.Index) ->
 }
 
 func parseFunctionRef(ctx: ParseContext, start: String.Index) -> FunctionRef {
-    let (start, end, name, options, close) = parseFunctionRefOrMarkup(ctx: ctx, start: start)
+    let (start, end, name, options, _) = parseFunctionRefOrMarkup(ctx: ctx, start: start)
     let open = Syntax(value: .colon, start: start, end: ctx.source.index(after: start))
     return FunctionRef(start: start, end: end, open: open, name: name, options: options)
 }
@@ -182,7 +182,7 @@ func parseOption(ctx: ParseContext, start: String.Index) -> Option {
         ctx.onError(type: .missingSyntax, start: pos, expected: "=")
     }
     pos = whitespaces(src: ctx.source, start: pos).end
-    let value: Option.Value =
+    let value: SimpleValue =
         ctx.source[pos] == "$"
             ? .variableRef(parseVariable(ctx: ctx, start: pos))
             : .literal(parseRequiredLiteral(ctx: ctx, start: pos))
